@@ -29,6 +29,7 @@ class Patch
 			@number = /_\d\d_/.match(file)
 		end
 		@number.strip!
+		@number = @number.to_i
 		@target.strip!
 		rescue => ex
 			nil
