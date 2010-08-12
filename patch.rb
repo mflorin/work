@@ -27,6 +27,7 @@ class Patch
 		end
 		if @number.nil?
 			@number = /_\d\d_/.match(file)
+			@number = @number.slice(1, 2) if not @number.nil?
 		end
 		@number.strip!
 		@number = @number.to_i

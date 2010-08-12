@@ -105,8 +105,8 @@ def apply_patch_set(target, set, start, stop)
 		TERM.reset_line
 		TERM.action target.dup + " : patch "
 		TERM.print idx.to_s.dup, :light_yellow
-		n += 1
 		p.load($patches_d + '/' + set[idx])
+		n += 1
 		exit_code = p.apply
 		if exit_code > 0
 			code = exit_code
@@ -148,7 +148,11 @@ TERM.info "applying patches"
 TERM.eol
 
 if not file.nil?
-	apply_patch_set(file, patches[file], start_idx, stop_idx)
+	code, errors = apply_patch_set(file, patches[file], start_idx, stop_idx)
+	if code > 0
+		TERM.error errors
+		exit
+	end
 else
 	patches.each_pair { |target, spec|
 		code, errors = apply_patch_set(target, spec, start_idx, stop_idx)
