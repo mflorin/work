@@ -5,14 +5,15 @@ class Patch
   
 	attr_accessor :file, :number, :target, :root, :stdout, :stderr, :exitcode, :patch_bin
   
-	def initialize(file, root = '.', patch = 'patch')
+	def initialize(file = '', root = '.', patch = 'patch')
 		@file = file
 		@root = root
 		@patch_bin = patch
-		parse
+		parse if not @file.empty?
 	end
   
 	def parse
+		begin
 		open(self.file).each do |line|
 			line.strip!
 			if (/^\+\+\+/.match(line))
@@ -29,6 +30,9 @@ class Patch
 		end
 		@number.strip!
 		@target.strip!
+		rescue => ex
+			nil
+		end
 	end
 	
 	def load(file)
