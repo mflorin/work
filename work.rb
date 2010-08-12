@@ -200,15 +200,6 @@ class Term
 	def print(msg, color = nil)
 
 		str = msg
-		if @line_len == 0
-			if color.nil?
-				@out.print prefix
-			else
-				@out.print prefix.colorize(color)
-			end
-			@out.flush
-			@line_len += prefix.length
-		end
 		@line_len += msg.length
 		str = str.colorize(color) if not color.nil?
 		@line << str

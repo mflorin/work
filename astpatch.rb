@@ -112,6 +112,7 @@ def apply_patch_set(target, set, start, stop)
 			code = exit_code
 			errors = p.stdout
 			TERM.failure
+			TERM.error p.file
 			ok = false
 			break
 		end
