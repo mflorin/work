@@ -98,6 +98,7 @@ end
 class Term
 
 	include Singleton
+	include Utils
 
 	attr_accessor :dent_val, :out
 	
@@ -131,73 +132,47 @@ class Term
 
 	LPAD = 0
 	RPAD = 10
+	
+	@out = STDOUT
+	@dent_val = 1
+	@last_str = ""
+	@line = ""
+	@line_len = 0
 
-	def initialize(out = nil)
+"""
+	def initialize(out = STDOUT)
 		@dent_val = 1
 		@last_str = ""
 		@line = ""
 		@line_len = 0
-		if out.nil?
-			@out = STDOUT 
-		else
-			@out = out
-		end
+		@out = out
 	end
+"""
 
-	def width_height
-	    # FIXME: I don't know how portable it is.
-	    default_width = 80
-		default_height = 25
-		fallback = 0
-	    begin
-			tiocgwinsz = 0x5413
-			data = [0, 0, 0, 0].pack("SSSS")
-			if @out.ioctl(tiocgwinsz, data) >= 0 then
-				rows, cols, xpixels, ypixels = data.unpack("SSSS")
-				if rows <= 0 or cols <= 0 then fallback = 1 end
-			else
-				fallback = 1
-			end
-	    rescue Exception
-			fallback = 1
-	    end
-
-		if fallback == 1
-			rows, cols = `stty size`.split.map { |x| x.to_i }
-			if rows <= 0 or cols <= 0
-				rows = default_height
-				cols = default_width
-			end
-		end
-		
-		[cols,rows]
-
-	end
-
-	def reset_line(cols = nil)
-		cols, = width_height if cols.nil?
+	def self.reset_line(cols = nil)
+		cols, = Utils.term_width_height if cols.nil?
 		@out.print "\r" + " " * cols + "\r"
 		@line = ""
 		@line_len = 0
 	end
 
-	def indent(x = 1)
+	def self.indent(x = 1)
 		@dent_val += x
 	end
 
-	def setdent(x = 0)
+	def self.setdent(x = 0)
 		@dent_val = x
 	end
 
-	def indent_str
+	def self.indent_str
 		' ' * LPAD + TAB * TAB_SIZE * @dent_val
 	end
 
-	def prefix
+	def self.prefix
 		indent_str + BULLET
 	end
 
-	def print(msg, color = nil)
+	def self.print(msg, color = nil)
 
 		str = msg
 		@line_len += msg.length
@@ -207,7 +182,7 @@ class Term
 		@out.flush
 	end
 
-	def text(msg, bullet = nil, eol = nil)
+	def self.text(msg, bullet = nil, eol = nil)
 		e = eol
 		e = "\n" if eol.nil?
 		if bullet.nil?
@@ -217,40 +192,40 @@ class Term
 		end
 	end
 
-	def eol
+	def self.eol
 		print "\n"
 		@line_len = 0
 		@line = ""
 	end
 	
-	def check_eol
+	def self.check_eol
 		eol if @line_len > 0
 	end
 	
-	def info(msg)
+	def self.info(msg)
 		check_eol
 		display(msg, INFO_TEXT_COLOR, prefix, INFO_BULLET_COLOR)
 	end
 
-	def warn(msg)
+	def self.warn(msg)
 		check_eol
 		display(msg, WARN_TEXT_COLOR, prefix, WARN_BULLET_COLOR)
 	end
 
-	def error(msg)
+	def self.error(msg)
 		check_eol
 		display(msg, ERROR_TEXT_COLOR, prefix, ERROR_BULLET_COLOR)
 	end
 
-	def action(msg)
+	def self.action(msg)
 		check_eol
 		print prefix, ACTION_BULLET_COLOR
 		print msg, ACTION_TEXT_COLOR
 	end
 
-	def ok(msg = nil)
+	def self.ok(msg = nil)
 
-		cols, = width_height
+		cols, = Utils.term_width_height
 		if not msg.nil?
 			action(msg)
 		end
@@ -264,9 +239,9 @@ class Term
 
 	end
 
-	def failure(msg = nil)
+	def self.failure(msg = nil)
 		
-		cols, = width_height
+		cols, = Utils.term_width_height
 		if not msg.nil?
 			reset_line(cols)
 			action(msg)
@@ -283,8 +258,8 @@ class Term
 
 private
 
-	def display(msg, msg_color = nil, sep = nil, sep_color = nil)
-		cols, = width_height
+	def self.display(msg, msg_color = nil, sep = nil, sep_color = nil)
+		cols, = Utils.term_width_height
 		cols -= 1
 		cols -= sep.length if not sep.nil?
 		msg_color = TEXT_COLOR if msg_color.nil?
@@ -299,9 +274,62 @@ private
 
 end
 
+class Text_Meta
+	
+	attr_accessor :out
+
+	def self.metaclass
+		class << self
+			self
+		end
+	end
+
+	def self.style(name, params)
+		raise "params must be a hash" unless params.class == Hash
+		@out = STDOUT	
+		func =<<-EOT1
+			def #{name}(str)
+				@out.print "\r"
+				#{params[:before]}.times { @out.print "\n" }
+		EOT1
+
+		if params.has_key?(:apply)
+			func << <<-EOT
+				if str.respond_to?("#{params[:apply]}")
+					s = str.send("#{params[:apply]}")
+				else
+					s = str.dup
+				end
+			EOT
+		else
+			func << <<-EOT
+				s = str.dup
+			EOT
+		end
+		func << <<-EOT
+				@out.print s.colorize("#{params[:fg]}".to_sym) + "\n"
+				#{params[:after]}.times { @out.print "\n" }
+			end
+		EOT
+		instance_eval func
+	end
+
+	instance_eval <<-EOT
+		def out= (o)
+			@out = o
+		end
+	EOT
+
+end
+
+class Text < Text_Meta
+	style "h1", :before => 2, :after => 1, :fg => :light_yellow, :bg => :default, :apply => :upcase
+	style "h2", :before => 1, :after => 0, :fg => :light_green, :bg => :default, :apply => :capitalize
+end
+
 end # End of Work module
 
-TERM = Work::Term.instance
+TERM = Work::Term
 CONFIG = Work::Config.instance
 PERF = Work::P4_Work.instance
-
+TEXT = Work::Text

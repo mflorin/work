@@ -35,6 +35,36 @@ module Utils
 		ret
 	end
 
+	def self.term_width_height
+	    # FIXME: I don't know how portable it is.
+	    default_width = 80
+		default_height = 25
+		fallback = 0
+	    begin
+			tiocgwinsz = 0x5413
+			data = [0, 0, 0, 0].pack("SSSS")
+			if @out.ioctl(tiocgwinsz, data) >= 0 then
+				rows, cols, xpixels, ypixels = data.unpack("SSSS")
+				if rows <= 0 or cols <= 0 then fallback = 1 end
+			else
+				fallback = 1
+			end
+	    rescue Exception
+			fallback = 1
+	    end
+
+		if fallback == 1
+			rows, cols = `stty size`.split.map { |x| x.to_i }
+			if rows <= 0 or cols <= 0
+				rows = default_height
+				cols = default_width
+			end
+		end
+		
+		[cols,rows]
+
+	end
+
 
 end # End of Util module
 

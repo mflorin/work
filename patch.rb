@@ -55,6 +55,8 @@ class Patch
 			input = open(@file, 'r')
 			@stdout, @stderr = sess.execute "#{@patch_bin} #{@root}/#{@target}", :stdin => input
 			@exitcode = sess.exit_status
+		rescue
+			raise $!
 		ensure
 			input.close
 		end

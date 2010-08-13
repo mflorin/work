@@ -4,6 +4,7 @@ require 'work'
 require 'patch'
 require 'getopt/long'
 
+
 trap("INT") { exit }
 
 def get_patches(patches_d)
@@ -133,6 +134,7 @@ def apply_patch_set(target, set, start, stop)
 end
 
 if init
+	TEXT.h1 "initializing"
 	TERM.action "initializing source"
 	begin
 	if not file.nil?
@@ -148,8 +150,7 @@ if init
 	TERM.ok
 end
 
-TERM.info "applying patches"
-TERM.eol
+TEXT.h1 "applying patches"
 
 if not file.nil?
 	code, errors = apply_patch_set(file, patches[file], start_idx, stop_idx)
