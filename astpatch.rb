@@ -133,7 +133,11 @@ def apply_patch_set(target, set, start, stop)
 		TERM.reset_line
 		TERM.action target.dup + " ("
 		TERM.print n.to_s, :light_yellow
-		TERM.print " patches)"
+		if n > 1
+			TERM.print " patches)"
+		else
+			TERM.print " patch)"
+		end
 		TERM.ok
 	end
 	
