@@ -312,11 +312,15 @@ class Term < Term_Meta
 				prev = nil
 				SPINNER.each {|s|
 					@out.print("\b" * prev.length) if not prev.nil?
+					@out.print(" " * prev.length) if not prev.nil?
+					@out.print("\b" * prev.length) if not prev.nil?
 					@out.print s
 					@out.flush
 					prev = s
 					sleep SPINNER_SLEEP
 				}
+				@out.print("\b" * SPINNER[SPINNER.length - 1].length)
+				@out.print(" " * SPINNER[SPINNER.length - 1].length)
 				@out.print("\b" * SPINNER[SPINNER.length - 1].length)
 			end
 		end
