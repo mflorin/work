@@ -13,27 +13,34 @@ class Patch
 	end
   
 	def parse
+		@number = nil
+		@target = ""
 		begin
-		open(self.file).each do |line|
-			line.strip!
-			if (/^\+\+\+/.match(line))
-				junk1, @target, junk2 = line.split(/\s+/)
-			end
-			unless (! /^\#/.match(line))
-				if (/\@Patch number:/.match(line))
-					junk1, @number = line.split(/\@Patch number:/)
+			(f = open(self.file)).each do |line|
+				line.strip!
+				if (/^\+\+\+/.match(line))
+					junk1, @target, junk2 = line.split(/\s+/)
+					break
+				end
+				unless (! /^\#/.match(line))
+					if (/\@Patch number:/.match(line))
+						junk1, @number = line.split(/\@Patch number:/)
+					end
 				end
 			end
-		end
-		if @number.nil?
-			@number = /_\d\d_/.match(file)
-			@number = @number.slice(1, 2) if not @number.nil?
-		end
-		@number.strip!
-		@number = @number.to_i
-		@target.strip!
+
+			if @number.nil?
+				match_data = /_(\d\d)_/.match(file)
+				if not match_data.nil? and not match_data[1].nil?
+					@number = match_data[1]
+				end
+			end
+			@number = @number.to_i
+			@target.strip!
 		rescue => ex
 			nil
+		ensure
+			f.close
 		end
 	end
 	
@@ -43,9 +50,14 @@ class Patch
 	end
 
 	def apply
-		sess = Session.new
-		@stdout, @stderr = sess.execute "#{@patch_bin} #{@root}/#{@target}", :stdin => open(@file, 'r')
-		@exitcode = sess.exit_status
+		begin
+			sess = Session.new
+			input = open(@file, 'r')
+			@stdout, @stderr = sess.execute "#{@patch_bin} #{@root}/#{@target}", :stdin => input
+			@exitcode = sess.exit_status
+		ensure
+			input.close
+		end
 	end 
   
 end

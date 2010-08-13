@@ -11,16 +11,20 @@ def get_patches(patches_d)
 	pobj = Patch.new
 	begin
 	Dir.foreach(patches_d) { |patch|
+		next if patch.eql? "."
+		next if patch.eql? ".."
 		pobj.load(patches_d + '/' + patch)
 		if not pobj.target.nil? and not pobj.number.nil?
 			if ret[pobj.target].nil?
 				ret[pobj.target] = Array.new
 			end
-			ret[pobj.target][pobj.number] = patch
+			ret[pobj.target][pobj.number.to_i] = patch
 		end
 	}
-	rescue
-		nil
+	rescue => ex
+		TERM.error "error while reading patches from `#{patches_d}'"
+		TERM.error ex.to_s
+		exit 1
 	end
 	ret
 end
@@ -83,7 +87,7 @@ end
 
 patches = get_patches($patches_d)
 if patches.nil? or patches.empty?
-	TERM.error "no patches found in `#{patches_d}'"
+	TERM.error "no patches found in `#{$patches_d}'"
 	exit
 end
 
@@ -155,6 +159,7 @@ if not file.nil?
 	end
 else
 	patches.each_pair { |target, spec|
+		next if target.nil? or target.empty?
 		code, errors = apply_patch_set(target, spec, start_idx, stop_idx)
 		if code > 0 and not opt["c"]
 			TERM.error errors
