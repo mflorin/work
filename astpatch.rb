@@ -4,6 +4,8 @@ require 'work'
 require 'patch'
 require 'getopt/long'
 
+$VERBOSE = nil
+TERM::SPINNER = [ '[|]', '[/]', '[-]', '[\]']
 
 trap("INT") {
 	TERM.check_eol
@@ -140,7 +142,8 @@ end
 
 if init
 	TERM.h1 "initializing"
-	TERM.action "initializing source"
+	TERM.action "initializing source "
+	TERM.spinner_start
 	begin
 	if not file.nil?
 		FileUtils.copy(vanilla_d + '/' + file, $source_d + '/' + file)
@@ -151,6 +154,8 @@ if init
 		TERM.failure
 		TERM.error ex.to_s
 		exit
+	ensure
+		TERM.spinner_stop
 	end
 	TERM.ok
 end

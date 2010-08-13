@@ -186,6 +186,10 @@ class Term < Term_Meta
 	LPAD = 0
 	RPAD = 10
 	
+	SPINNER = ['|', '/', '-', '\\', '|']
+	SPINNER_SLEEP = 0.1
+
+
 	@out = STDOUT
 	@dent_val = 1
 	@last_str = ""
@@ -297,6 +301,30 @@ class Term < Term_Meta
 		print ' ' + DOT * (cols - @line_len - failure_str_len - 2 - RPAD) \
 					+ ' ' + failure_str
 		eol
+	end
+
+	def self.spinner_start
+		return if @spinner_running
+		return if not SPINNER.instance_of? Array
+		@spinner_running = true
+		@spinner_thread = Thread.new do
+			until not @spinner_running 
+				prev = nil
+				SPINNER.each {|s|
+					@out.print("\b" * prev.length) if not prev.nil?
+					@out.print s
+					@out.flush
+					prev = s
+					sleep SPINNER_SLEEP
+				}
+				@out.print("\b" * SPINNER[SPINNER.length - 1].length)
+			end
+		end
+	end
+
+	def self.spinner_stop
+		@spinner_running = false;
+		@spinner_thread.join
 	end
 
 private
