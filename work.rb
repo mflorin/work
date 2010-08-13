@@ -95,12 +95,65 @@ class P4_Work < DelegateClass(P4)
 
 end
 
-class Term
+class Term_Meta
+	
+	attr_accessor :out
 
-	include Singleton
+	def self.metaclass
+		class << self
+			self
+		end
+	end
+
+	def self.style(name, params)
+		raise "params must be a hash" unless params.class == Hash
+		@out = STDOUT	
+		func =<<-EOT1
+			def #{name}(str)
+				@out.print "\r"
+				#{params[:before]}.times { @out.print "\n" }
+		EOT1
+
+		if params.has_key?(:apply)
+			func << <<-EOT
+				if str.respond_to?("#{params[:apply]}")
+					s = str.send("#{params[:apply]}")
+				else
+					s = str.dup
+				end
+			EOT
+		else
+			func << <<-EOT
+				s = str.dup
+			EOT
+		end
+		func << <<-EOT
+				@out.print s.colorize("#{params[:fg]}".to_sym) + "\n"
+				#{params[:after]}.times { @out.print "\n" }
+			end
+		EOT
+		instance_eval func
+	end
+
+	instance_eval <<-EOT
+		def out= (o)
+			@out = o
+		end
+
+		def out
+			@out
+		end
+	EOT
+
+end
+
+
+class Term < Term_Meta
+
 	include Utils
 
-	attr_accessor :dent_val, :out
+	style "h1", :before => 2, :after => 1, :fg => :light_yellow, :bg => :default, :apply => :upcase
+	style "h2", :before => 1, :after => 0, :fg => :light_green, :bg => :default, :apply => :capitalize
 	
 	TEXT_COLOR = :light_black
 
@@ -138,16 +191,6 @@ class Term
 	@last_str = ""
 	@line = ""
 	@line_len = 0
-
-"""
-	def initialize(out = STDOUT)
-		@dent_val = 1
-		@last_str = ""
-		@line = ""
-		@line_len = 0
-		@out = out
-	end
-"""
 
 	def self.reset_line(cols = nil)
 		cols, = Utils.term_width_height if cols.nil?
@@ -274,62 +317,8 @@ private
 
 end
 
-class Text_Meta
-	
-	attr_accessor :out
-
-	def self.metaclass
-		class << self
-			self
-		end
-	end
-
-	def self.style(name, params)
-		raise "params must be a hash" unless params.class == Hash
-		@out = STDOUT	
-		func =<<-EOT1
-			def #{name}(str)
-				@out.print "\r"
-				#{params[:before]}.times { @out.print "\n" }
-		EOT1
-
-		if params.has_key?(:apply)
-			func << <<-EOT
-				if str.respond_to?("#{params[:apply]}")
-					s = str.send("#{params[:apply]}")
-				else
-					s = str.dup
-				end
-			EOT
-		else
-			func << <<-EOT
-				s = str.dup
-			EOT
-		end
-		func << <<-EOT
-				@out.print s.colorize("#{params[:fg]}".to_sym) + "\n"
-				#{params[:after]}.times { @out.print "\n" }
-			end
-		EOT
-		instance_eval func
-	end
-
-	instance_eval <<-EOT
-		def out= (o)
-			@out = o
-		end
-	EOT
-
-end
-
-class Text < Text_Meta
-	style "h1", :before => 2, :after => 1, :fg => :light_yellow, :bg => :default, :apply => :upcase
-	style "h2", :before => 1, :after => 0, :fg => :light_green, :bg => :default, :apply => :capitalize
-end
-
 end # End of Work module
 
 TERM = Work::Term
 CONFIG = Work::Config.instance
 PERF = Work::P4_Work.instance
-TEXT = Work::Text

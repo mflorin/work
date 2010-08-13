@@ -58,7 +58,7 @@ class Patch
 		rescue
 			raise $!
 		ensure
-			input.close
+			input.close if not input.nil?
 		end
 	end 
   
