@@ -1,11 +1,12 @@
 #!/usr/bin/ruby
+$LOAD_PATH.unshift File.expand_path(File.join(File.dirname(__FILE__), "."))
 
 require 'work'
 require 'patch'
 require 'getopt/long'
 
 $VERBOSE = nil
-TERM::SPINNER = [ '[|]', '[/]', '[-]', '[\]']
+TERM::SPINNER = [ '[|]', '[/]', '[-]', '[\]' ]
 
 trap("INT") {
 	TERM.check_eol
