@@ -1,0 +1,94 @@
+# Everything after this is generic
+
+DEVELOPER_MODE?=0
+COLOURED_OUTPUT?=0
+SILENT_BUILD?=0
+
+BIN_DIR?=bin
+DEPDIR?=.depend
+COMPILER?=gcc
+LINKER?=gcc
+DEBUG?=0
+CLEAN_ON_ERROR=exit 1;
+MKDIR?=mkdir -p
+RM?=rm -f
+
+CFLAGS?=-DLINUX -Wall
+
+PROC=$(shell uname -m)
+ifeq ($(PROC),x86_64)
+CFLAGS+=-m64
+else
+CFLAGS+=$(EXTRA_CFLAGS)
+endif
+
+ifeq ($(DEVELOPER_MODE), 1)
+ CFLAGS+=-DDEVELOPER_MODE
+else
+ CLEAN_ON_ERROR=$(MAKE) clean; exit 1;
+endif
+
+ifeq ($(DEBUG), 1)
+CFLAGS+=-g
+endif
+
+ifneq ($(BIN_DIR),)
+BIN_DIR:=$(BIN_DIR)/
+endif
+   
+.PHONY: all
+all: $(PROGRAMS)
+
+-include $(DEPDIR)/*.Po
+
+define OBJECT_template
+ifneq ($($(1)_CFLAGS),)
+$(1).o:
+	@$$(MKDIR) $$(DEPDIR)
+	$$(ECHO_PREFIX) echo -e "    $$(BUILDING_COLOR)compiling$$(NEUTRAL_COLOR) $$(TEXT_COLOR)$$< ...$$(NEUTRAL_COLOR)"
+	$$(CMD_PREFIX) if $$(COMPILER) -MT $$@ -MD -MP -MF "$$(DEPDIR)/$$*.Tpo" -c $$< -o $$@ $$($(1)_CFLAGS) ; then mv -f "$$(DEPDIR)/$$*.Tpo" "$$(DEPDIR)/$$*.Po"; else rm -f "$$(DEPDIR)/$$*.Tpo"; $$(CLEAN_ON_ERROR) fi
+endif
+endef     
+
+define PROGRAM_template
+$(1): $$($(1)_OBJS)
+	@$$(MKDIR) $$(BIN_DIR)
+	$$(ECHO_PREFIX) echo -e "    $$(LINKING_COLOR)linking$$(NEUTRAL_COLOR)   $$(BOLD_COLOR)$$@$$(NEUTRAL_COLOR) $$(TEXT_COLOR)...$$(NEUTRAL_COLOR)"
+	$$(ECHO_PREFIX) echo
+ifneq ($($(1)_LDFLAGS),)
+	$$(CMD_PREFIX) $$(LINKER) $$^ $$($(1)_LIBS:%=-l%) -o $$(BIN_DIR)$$@ $$($(1)_LDFLAGS)
+else
+	$$(CMD_PREFIX) $$(LINKER) $$^ $$($(1)_LIBS:%=-l%) -o $$(BIN_DIR)$$@ $$(LDFLAGS)
+endif
+ALL_OBJS   += $$($(1)_OBJS)
+$(foreach obj,$($(1)_OBJS), $(eval $(call OBJECT_template,$(obj:.o=))))
+endef
+     
+$(foreach prog,$(PROGRAMS),$(eval $(call PROGRAM_template,$(prog))))
+     
+clean:
+	$(ECHO_PREFIX) echo -e "    $(CLEANING_COLOR)cleaning$(NEUTRAL_COLOR) $(TEXT_COLOR)$(ALL_OBJS) $(PROGRAMS) ...$(NEUTRAL_COLOR)"
+	$(CMD_PREFIX)$(RM) $(ALL_OBJS) $(PROGRAMS:%=$(BIN_DIR)%)
+
+
+ifneq ($(SILENT_BUILD),1)
+    ECHO_PREFIX=@\#
+    CMD_PREFIX=
+else
+    ifeq ($(COLOURED_OUTPUT),1)
+        NEUTRAL_COLOR=\033[0m
+        TEXT_COLOR=\033[1;30m
+        BUILDING_COLOR=\033[33m
+        LINKING_COLOR=\033[1;32m
+        CLEANING_COLOR=\033[33m
+        BOLD_COLOR=\033[4m
+    endif
+   ECHO_PREFIX=@
+   CMD_PREFIX=@
+endif
+
+.c.o:
+	@mkdir -p $(DEPDIR)
+	$(ECHO_PREFIX) echo -e "    $(BUILDING_COLOR)compiling$(NEUTRAL_COLOR) $(TEXT_COLOR)$< ...$(NEUTRAL_COLOR)"
+	$(CMD_PREFIX) if $(COMPILER) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c $< -o $@ $(CFLAGS); then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Po"; else rm -f "$(DEPDIR)/$*.Tpo"; $(CLEAN_ON_ERROR) fi
+
