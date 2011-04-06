@@ -59,6 +59,7 @@ class Patch
 			raise $!
 		ensure
 			input.close if not input.nil?
+                        sess.close
 		end
 	end 
   
